@@ -1,0 +1,156 @@
+#%%
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+from PIL import Image
+import cv2
+import opencv_jupyter_ui
+import matplotlib.pyplot as plt
+from collections import defaultdict
+import calendar
+
+#%%
+
+#Read in the data
+data = pd.read_csv("Lekagul Sensor Data.csv")
+data
+
+#%%
+
+#Check each column's data type
+data.dtypes
+
+#%%
+
+#Check for nulls
+data.isna().sum()
+
+#%%
+
+#Change variables to appropriate type
+data['Timestamp'] = pd.to_datetime(data['Timestamp'])
+data['car-type'] = data['car-type'].astype('category')
+data['gate-name'] = data['gate-name'].astype('category')
+data
+
+#%%
+
+#Check each column's data type again
+data.dtypes
+
+#%%
+
+#Describe the statistics of the base data
+data.describe()
+
+#%%
+
+#Visualize distribution of each column & outliers
+data.hist(bins=1000, figsize=(15, 10))
+
+#%%
+
+#load in bmp
+img = cv2.imread('Lekagul Roadways.bmp')
+flip = img[::-1,:,:]
+#bmp = img.convert(mode="RGB")
+pixel_values = flip[:,:,::-1]
+print(pixel_values)
+plt.imshow(flip[:,:,::-1],vmin=0,vmax=255), plt.show()
+plt.imshow(flip[:,:,::-1]), plt.gca().invert_yaxis(), plt.show()
+
+#%%
+#color names
+
+# (0, 0, 0), black
+#  (0, 255, 255), cyan
+#  (1, 1, 1), black
+#  (2, 2, 2), black
+#  (3, 3, 3), black
+#  (5, 5, 5), black
+#  (6, 6, 6), black
+#  (8, 8, 8), black
+#  (9, 9, 9), black
+#  (14, 14, 14), black
+#  (16, 16, 16),black
+#  (17, 17, 17),black
+#  (18, 18, 18),black
+#  (19, 19, 19),black
+#  (20, 20, 20),black
+#  (21, 21, 21),black
+#  (22, 22, 22),black
+#  (23, 23, 23),black
+#  (24, 24, 24),black
+#  (25, 25, 25),black
+#  (31, 31, 31),black
+#  (46, 46, 46),black
+#  (64, 64, 64),black
+#  (65, 65, 65),black
+#  (66, 66, 66),black
+#  (67, 67, 67),black
+#  (68, 68, 68),black
+#  (70, 70, 70),black
+#  (72, 72, 72),black
+#  (76, 255, 0),green
+#  (239, 239, 239),yellow
+#  (255, 0, 0),red
+#  (255, 0, 220),pink
+#  (255, 106, 0),orange
+#  (255, 216, 0),orange
+#  (255, 255, 255)white
+
+#%%
+
+#create np.array grid
+# replace color values with sensor names
+# 'R' signifies a road
+# '.' signifies empty space
+grid = [['.' for i in range(200)] for j in range(200)]
+
+for y in range(len(pixel_values)):
+    for x in range(len(pixel_values[y])):
+        if (pixel_values[x][y] == [0, 255, 255]).all():
+            grid[x][y] = 'General_Gate'
+        elif (pixel_values[x][y] == [76, 255, 0]).all():
+            grid[x][y] = 'Entrance'
+        elif (pixel_values[x][y] == [255, 216, 0]).all():
+            grid[x][y] = 'Ranger_Stop'
+        elif (pixel_values[x][y] == [255, 0, 0]).all():
+            grid[x][y] = 'Gate'
+        elif (pixel_values[x][y] == [255, 0, 220]).all():
+            grid[x][y] = 'Ranger_Base'
+        elif (pixel_values[x][y] == [255, 106, 0]).all():
+            grid[x][y] = 'Camping'
+        elif (pixel_values[x][y] == [255, 255, 255]).all():
+            grid[x][y] = 'R'
+        else:
+            continue
+
+#%%
+
+checked = []
+
+def find_dist(start, end, count):
+    checked.append(start)
+    #print("*******************************")
+    #print([start[0] + 1, start[1]], start)
+    if start == end:
+        return print(start, end, count)
+    else:
+        if ['R', (start[0] + 1, start[1])] in color_map and [start[0] + 1, start[1]] not in checked:
+            count += 1
+            find_dist([start[0] + 1, start[1]], end, count)
+        if ['R', (start[0], start[1] + 1)] in color_map and [start[0], start[1] + 1] not in checked:
+            count += 1
+            find_dist([start[0], start[1] + 1], end, count)
+        if ['R', (start[0] - 1, start[1])] in color_map and [start[0] - 1, start[1]] not in checked:
+            count += 1
+            find_dist([start[0] - 1, start[1]], end, count)
+        if ['R', (start[0], start[1] - 1)] in color_map and [start[0], start[1] - 1] not in checked:
+            count += 1
+            find_dist([start[0], start[1] - 1], end, count)
+        else:
+            return print("No Path!")
+
+find_dist([140, 15], [138, 18], 0)
